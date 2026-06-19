@@ -6,6 +6,7 @@ vim.opt.shiftwidth = 2
 
 vim.cmd 'set expandtab'
 vim.cmd 'set tabstop=1'
+
 vim.cmd 'set softtabstop=1'
 vim.cmd 'set shiftwidth=1'
 vim.keymap.set('i', 'jj', '<esc>', { noremap = true, silent = true })
@@ -15,12 +16,19 @@ vim.keymap.set('n', '<leader>k', '<c-w>k')
 vim.keymap.set('n', '<leader>h', '<c-w>h')
 vim.keymap.set('n', '<leader>l', '<c-w>l')
 
+
+vim.keymap.set('n', '<leader>s', '<cmd>w<cr>', { noremap = true, silent = true })
+
+vim.keymap.set('n', '<leader>c', '"+Y', { noremap = true, silent = true })
+vim.keymap.set('v', '<leader>c', '"+y', { noremap = true, silent = true })
+
+
 vim.keymap.set('n', 'gp', '<cmd>telescope lsp_definitions<cr>', { desc = 'peek definition' })
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'next diagnostic' })
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'prev diagnostic' })
 vim.keymap.set('n', '<leader>d', vim.diagnostic.open_float, { desc = 'show diagnostic' })
 
-vim.keymap.set('n', '<leader>z', '<cmd>wqa<cr>', { noremap = true, silent = true })
+vim.keymap.set('n', '<leader>q', '<cmd>wqa<cr>', { noremap = true, silent = true })
 
 vim.keymap.set('t', '<esc>', [[<c-\><c-n>]], { noremap = true, silent = true })
 vim.keymap.set('t', '<s-j>', [[<c-\><c-n><c-w>j]], { noremap = true, silent = true })
