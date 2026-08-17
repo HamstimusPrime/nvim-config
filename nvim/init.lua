@@ -7,6 +7,15 @@ vim.opt.shiftwidth = 2
 vim.cmd 'set expandtab'
 vim.cmd 'set tabstop=1'
 
+vim.api.nvim_create_autocmd('ColorScheme', {
+  callback = function()
+    vim.api.nvim_set_hl(0, 'DapStopped', { bg = '#242733' })
+    vim.api.nvim_set_hl(0, 'NvimDapVirtualText', { fg = '#7e8294', italic = true })
+    vim.api.nvim_set_hl(0, 'NvimDapVirtualTextChanged', { fg = '#4bb8b4', bold = true })
+    vim.api.nvim_set_hl(0, 'NvimDapVirtualTextError', { fg = '#f7768e' })
+  end,
+})
+
 vim.cmd 'set softtabstop=1'
 vim.cmd 'set shiftwidth=1'
 vim.keymap.set('i', 'jj', '<esc>', { noremap = true, silent = true })
@@ -52,7 +61,7 @@ vim.keymap.set('n', '<leader>n', ':NvimTreeToggle<cr>', { desc = 'toggle file tr
 
 vim.fn.sign_define('DapBreakpoint', { text = '🔴', texthl = 'DapBreakpoint', linehl = 'DapBreakpoint', numhl = 'DapBreakpoint' })
 
-vim.fn.sign_define('DapStopped', { text = '🔴', texthl = 'DapStopped', linehl = 'DapStopped', numhl = 'DapStopped' })
+vim.fn.sign_define('DapStopped', { text = '➡️', texthl = 'DapStopped', linehl = 'DapStopped', numhl = 'DapStopped' })
 
 vim.keymap.set('n', '<leader>jr', function()
   vim.cmd 'JavaBuildBuildWorkspace'
@@ -71,10 +80,10 @@ end, { desc = 'Java: Build + Run' })
 
 vim.opt.autowriteall = true
 
-vim.api.nvim_create_autocmd('focuslost', {
-  pattern = '*',
-  command = 'silent! wa',
-})
+-- vim.api.nvim_create_autocmd('focuslost', {
+--   pattern = '*',
+--   command = 'silent! wa',
+-- })
 
 vim.api.nvim_create_autocmd('TermOpen', {
   callback = function(args) vim.keymap.set('n', '<leader>q', '<cmd>close<cr>', { buffer = args.buf, silent = true }) end,
@@ -274,7 +283,27 @@ require('lazy').setup {
         -- optional but recommended
         { 'nvim-telescope/telescope-fzf-native.nvim', build = 'make' },
       },
+      config = function()
+        require('telescope').setup {
+          defaults = {
+            layout_strategy = 'horizontal',
+            layout_config = {
+              preview_width = 0.75,
+            },
+          },
+          extensions = {
+            fzf = {
+              fuzzy = true,
+              override_generic_sorter = true,
+              override_file_sorter = true,
+              case_mode = 'smart_case',
+            },
+          },
+        }
+        require('telescope').load_extension 'fzf'
+      end,
     },
+
     {
       'nvim-tree/nvim-tree.lua',
       version = '*',
@@ -453,13 +482,19 @@ require('lazy').setup {
         require('mason-nvim-dap').setup {
           ensure_installed = { 'delve', 'python', 'node2', 'java-debug' },
           automatic_installation = true,
-          handlers = {}, -- required, even if empty
+          handlers = {
+            delve = function() end, -- disable the generic auto-config; dap-go already provides a correct one
+          }, -- required, even if empty
         }
 
         -- setup the UI
         dapui.setup()
         -- setup virtual text
-        require('nvim-dap-virtual-text').setup()
+        require('nvim-dap-virtual-text').setup {
+          virt_text_pos = 'eol',
+
+          all_references = true,
+        }
         -- setup Go-specific dap config (wires delve for you)
         require('dap-go').setup()
 
@@ -488,6 +523,17 @@ require('lazy').setup {
         vim.keymap.set('n', '<leader>do', dap.step_over, { desc = 'step over' })
         vim.keymap.set('n', '<leader>di', dap.step_into, { desc = 'step into' })
         vim.keymap.set('n', '<leader>du', dapui.toggle, { desc = 'toggle dap ui' })
+        vim.keymap.set('n', '<leader>dq', dap.terminate, { desc = 'debug: terminate session' })
+        -- Eval var under cursor
+        vim.keymap.set('n', '<space>?', function() require('dapui').eval(nil, { enter = true }) end)
+        vim.keymap.set(
+          'n',
+          '<leader>dcl',
+          function() require('dap.breakpoints').clear(vim.api.nvim_get_current_buf()) end,
+          nd,
+          { desc = 'debug: clear breakpoints in current file' }
+        )
+
         vim.keymap.set('n', '<leader>dt', require('dap-go').debug_test, { desc = 'debug go test' })
       end,
     },
@@ -519,10 +565,36 @@ require('lazy').setup {
       'brianhuster/live-preview.nvim',
       cmd = { 'LivePreview' },
     },
+    {
+      'emmanueltouzery/apidocs.nvim',
+      dependencies = {
+        'nvim-treesitter/nvim-treesitter',
+        'nvim-telescope/telescope.nvim', -- or, 'folke/snacks.nvim'
+      },
+      cmd = { 'ApidocsSearch', 'ApidocsInstall', 'ApidocsOpen', 'ApidocsSelect', 'ApidocsUninstall' },
+      config = function()
+        -- Picker will be auto-detected. To select a picker of your choice explicitly you can set picker by the configuration option 'picker':
+        require('apidocs').setup { picker = 'telescope', follow_link_keymap = '<C-]>' }
+        -- Possible options are 'ui_select', 'telescope', and 'snacks'
+        -- You can change the keymap for following "local://" links by setting the configuration option 'follow_link_keymap' (default is "<C-]>"):
+      end,
+      keys = {
+        { '<leader>sad', '<cmd>ApidocsOpen<cr>', desc = 'Search Api Doc' },
+      },
+    },
+    -- {
+    --   'MeanderingProgrammer/render-markdown.nvim',
+    --   -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-mini/mini.nvim' }, -- if you use the mini.nvim suite
+    --   -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-mini/mini.icons' },        -- if you use standalone mini plugins
+    --   dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' }, -- if you prefer nvim-web-devicons
+    --   --@module 'render-markdown'
+    --   --@type render.md.UserConfig
+    --   opts = {},
+    -- },
   },
 
   -- Configure any other settings here. See the documentation for more details.
-  -- colorscheme that will be used when installing plugins.
+  -- RRlorscheme that will be used when installing plugins.
   install = { colorscheme = { 'habamax' } },
   -- automatically check for plugin updates
   checker = { enabled = true },
