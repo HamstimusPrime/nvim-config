@@ -498,6 +498,38 @@ require('lazy').setup {
         -- setup Go-specific dap config (wires delve for you)
         require('dap-go').setup()
 
+        -- custom config: debug the whole package, with a dynamic argument prompt
+        table.insert(dap.configurations.go, {
+          type = 'go',
+          name = 'Debug Package (Arguments)',
+          request = 'launch',
+          program = '${fileDirname}',
+          args = function()
+            local args_string = vim.fn.input 'Arguments: '
+            return vim.split(args_string, ' +')
+          end,
+        })
+
+        table.insert(dap.configurations.go, {
+          type = 'go',
+          name = 'Debug Package (Arguments + Env Vars)',
+          request = 'launch',
+          program = '${fileDirname}',
+          args = function()
+            local args_string = vim.fn.input 'Arguments: '
+            return vim.split(args_string, ' +')
+          end,
+          env = function()
+            local env_string = vim.fn.input 'Environment variables (KEY=VALUE KEY2=VALUE2): '
+            local env_table = {}
+            for pair in env_string:gmatch '%S+' do
+              local key, value = pair:match '^(.-)=(.*)$'
+              if key and value then env_table[key] = value end
+            end
+            return env_table
+          end,
+        })
+
         -- Python
         local function get_python_path()
           -- get the current working directory nvim was opened in
