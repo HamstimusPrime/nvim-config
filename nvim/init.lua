@@ -16,10 +16,38 @@ vim.api.nvim_create_autocmd('ColorScheme', {
   end,
 })
 
+vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
+  pattern = 'term://*lazygit*',
+  command = 'startinsert',
+})
+
+vim.api.nvim_create_autocmd('TermOpen', {
+  pattern = '*',
+  callback = function(args)
+    -- only touch buffers that are running lazygit
+    local buf_name = vim.api.nvim_buf_get_name(args.buf)
+    if buf_name:match 'lazygit' then vim.keymap.set('t', '<Esc>', '<Esc>', { buffer = args.buf }) end
+  end,
+})
+
 vim.cmd 'set softtabstop=1'
 vim.cmd 'set shiftwidth=1'
 vim.keymap.set('i', 'jj', '<esc>', { noremap = true, silent = true })
 vim.g.mapleader = ' '
+vim.keymap.set('n', '<C-u>', '<C-u>zz')
+vim.keymap.set('n', '<C-d>', '<C-d>zz')
+
+vim.keymap.set('n', 'j', 'jzz')
+vim.keymap.set('n', 'k', 'kzz')
+
+-- set keymap to toggele variable colors
+vim.keymap.set('n', '<leader>tc', function() require('markid').toggle() end, { desc = 'toggle markid colors' })
+
+-- For default preset
+vim.keymap.set('n', '<leader>m', function() require('treesj').toggle() end)
+-- For extending default preset with `recursive = true`
+vim.keymap.set('n', '<leader>M', function() require('treesj').toggle { split = { recursive = true } } end)
+
 vim.keymap.set('n', '<leader>j', '<c-w>j')
 vim.keymap.set('n', '<leader>k', '<c-w>k')
 vim.keymap.set('n', '<leader>h', '<c-w>h')
@@ -30,6 +58,7 @@ vim.keymap.set('n', '<leader>s', '<cmd>w<cr>', { noremap = true, silent = true }
 
 vim.keymap.set('n', '<leader>c', '"+Y', { noremap = true, silent = true })
 vim.keymap.set('v', '<leader>c', '"+y', { noremap = true, silent = true })
+vim.keymap.set('v', '<leader>x', '"+d', { noremap = true, silent = true })
 
 vim.keymap.set('n', 'gp', '<cmd>telescope lsp_definitions<cr>', { desc = 'peek definition' })
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'next diagnostic' })
@@ -41,10 +70,10 @@ vim.keymap.set('t', '<leader>q', [[<C-\><C-n>:bd!<CR>]], { desc = 'Kill terminal
 vim.keymap.set('n', '<leader>cl', '<cmd>q<cr>', { noremap = true, silent = true })
 
 vim.keymap.set('t', '<esc>', [[<c-\><c-n>]], { noremap = true, silent = true })
-vim.keymap.set('t', '<s-j>', [[<c-\><c-n><c-w>j]], { noremap = true, silent = true })
-vim.keymap.set('t', '<s-k>', [[<c-\><c-n><c-w>k]], { noremap = true, silent = true })
-vim.keymap.set('t', '<s-h>', [[<c-\><c-n><c-w>h]], { noremap = true, silent = true })
-vim.keymap.set('t', '<s-l>', [[<c-\><c-n><c-w>l]], { noremap = true, silent = true })
+-- vim.keymap.set('t', '<s-j>', [[<c-\><c-n><c-w>j]], { noremap = true, silent = true })
+-- vim.keymap.set('t', '<s-k>', [[<c-\><c-n><c-w>k]], { noremap = true, silent = true })
+-- vim.keymap.set('t', '<s-h>', [[<c-\><c-n><c-w>h]], { noremap = true, silent = true })
+-- vim.keymap.set('t', '<s-l>', [[<c-\><c-n><c-w>l]], { noremap = true, silent = true })
 
 vim.keymap.set('n', '<leader>ch', ':nohl<cr>', { noremap = true, silent = true })
 vim.keymap.set('n', '<leader>jj', ':m .+1<cr>==', { noremap = true, silent = true })
@@ -123,6 +152,15 @@ vim.api.nvim_create_autocmd('filetype', {
   end,
 })
 
+vim.api.nvim_create_autocmd('filetype', {
+  pattern = 'javascript,javascriptreact,typescript,typescriptreact',
+  callback = function()
+    vim.opt_local.tabstop = 2
+    vim.opt_local.shiftwidth = 2
+    vim.opt_local.softtabstop = 2
+  end,
+})
+
 -- bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
@@ -155,7 +193,7 @@ vim.diagnostic.config {
 require('lazy').setup {
   spec = {
     -- add your plugins here
-
+    { 'b0o/schemastore.nvim' },
     { 'nvim-lua/plenary.nvim' }, -- none-ls depends on this
     { 'nvimtools/none-ls.nvim', dependencies = { 'nvimtools/none-ls-extras.nvim' } },
     {
@@ -198,6 +236,16 @@ require('lazy').setup {
           bg = '#285f62', -- dark orange background behind it
           bold = true,
         })
+      end,
+    },
+
+    {
+      'Wansmer/treesj',
+      -- keys = { '<space>m', '<space>j', '<space>s' },
+      dependencies = { 'nvim-treesitter/nvim-treesitter' }, -- if you install parsers with `nvim-treesitter`
+      config = function()
+        require('treesj').setup { --[[ your config ]]
+        }
       end,
     },
     -- nvim v0.8.0
@@ -371,6 +419,9 @@ require('lazy').setup {
         -- (Default) Only show the documentation popup when manually triggered
         completion = {
           documentation = { auto_show = false },
+          trigger = {
+            show_on_trigger_character = true,
+          },
           accept = {
             resolve_timeout_ms = 400, -- default is short; raise it so imports aren't dropped
           },
@@ -633,9 +684,11 @@ require('lazy').setup {
 }
 require('mason').setup()
 require('mason-lspconfig').setup {
-  ensure_installed = { 'gopls', 'jdtls', 'pyright' },
+  ensure_installed = { 'gopls', 'jdtls', 'pyright', 'jsonls', 'ts_ls' },
   automatic_installation = true,
 }
+
+require('markid').setup()
 -- Tell pyright to suggest unimported symbols AND add the import when accepted
 vim.lsp.config('pyright', {
   settings = {
@@ -657,6 +710,24 @@ vim.lsp.config('gopls', {
     },
   },
 })
+
+vim.lsp.config('jsonls', {
+  settings = {
+    json = {
+      schemas = require('schemastore').json.schemas {
+        select = {
+          '.eslintrc',
+          'package.json',
+        },
+      },
+
+      validate = { enable = true },
+    },
+  },
+})
+
+vim.lsp.enable 'jsonls'
+vim.lsp.enable 'ts_ls'
 vim.lsp.enable 'gopls'
 vim.lsp.enable 'pyright'
 local null_ls = require 'null-ls'
