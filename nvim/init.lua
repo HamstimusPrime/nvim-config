@@ -31,6 +31,7 @@ vim.api.nvim_create_autocmd('TermOpen', {
   end,
 })
 
+vim.o.statusline = '%F'
 vim.cmd 'set softtabstop=1'
 vim.cmd 'set shiftwidth=1'
 vim.keymap.set('i', 'jj', '<esc>', { noremap = true, silent = true })
@@ -47,6 +48,8 @@ vim.keymap.set('n', '<leader>tc', function() require('markid').toggle() end, { d
 -- set keymap to shuffle variable colors
 vim.keymap.set('n', '<leader>ts', function() require('markid').shuffle() end, { desc = 'shuffle markid colors' })
 
+vim.keymap.set('n', '<leader>tw', function() require('markid').shuffle_word_under_cursor() end, { desc = 'shuffle color for word under cursor' })
+vim.keymap.set('n', '<leader>tr', function() require('markid').reset_word_under_cursor() end, { desc = 'reset color for word under cursor' })
 
 -- For default preset
 vim.keymap.set('n', '<leader>m', function() require('treesj').toggle() end)
@@ -250,7 +253,7 @@ require('lazy').setup {
       dependencies = { 'nvim-treesitter/nvim-treesitter' }, -- if you install parsers with `nvim-treesitter`
       config = function()
         require('treesj').setup {
-         use_default_keymaps = false
+          use_default_keymaps = false,
         }
       end,
     },
@@ -465,7 +468,7 @@ require('lazy').setup {
           sections = {
             lualine_a = { 'mode' },
             lualine_b = { 'branch' },
-            lualine_c = { 'filename' },
+            lualine_c = { { 'filename', path = 1 } },
             lualine_x = { 'filetype' },
             lualine_y = { 'progress' },
             lualine_z = { 'location' },

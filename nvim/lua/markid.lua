@@ -17,6 +17,8 @@ M.colors = {
 }
 
 
+
+
 M.exclude_parents = {
   "field_identifier",        -- Go struct fields / selector expressions
   "field_declaration",       -- Go struct field decls
@@ -27,6 +29,7 @@ M.exclude_parents = {
 }
 local ns = vim.api.nvim_create_namespace("markid")
 M.enabled = true
+M.overrides = {}  -- [identifier text] = color index, set manually via shuffle_word
 
 -- FNV-1a hash: mixes bits multiplicatively, spreads names across
 -- the color list much more evenly than a simple byte sum would.
@@ -77,7 +80,7 @@ function M.highlight(bufnr)
 
       if not skip then
         local text = vim.treesitter.get_node_text(node, bufnr)
-        local idx = (hash(text) % #M.colors) + 1
+        local idx = M.overrides[text] or ((hash(text) % #M.colors) + 1)
         local group = "Markid" .. idx
         vim.api.nvim_set_hl(0, group, { fg = M.colors[idx] })
 
@@ -112,6 +115,44 @@ function M.shuffle()
     end
   end
   vim.notify("markid: colors shuffled")
+end
+
+-- Reassign a random color to one specific identifier name, independent
+-- of the hash-based color every other name still uses.
+function M.shuffle_word(word)
+  if not word or word == "" then return end
+  local current = M.overrides[word] or ((hash(word) % #M.colors) + 1)
+  local idx = current
+  if #M.colors > 1 then
+    while idx == current do
+      idx = math.random(#M.colors)
+    end
+  end
+  M.overrides[word] = idx
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(bufnr) then
+      M.highlight(bufnr)
+    end
+  end
+  vim.notify("markid: shuffled color for '" .. word .. "'")
+end
+
+function M.shuffle_word_under_cursor()
+  M.shuffle_word(vim.fn.expand("<cword>"))
+end
+
+-- Remove a name's manual override, letting it fall back to its hash color.
+function M.reset_word(word)
+  M.overrides[word] = nil
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(bufnr) then
+      M.highlight(bufnr)
+    end
+  end
+end
+
+function M.reset_word_under_cursor()
+  M.reset_word(vim.fn.expand("<cword>"))
 end
 
 function M.setup(opts)
