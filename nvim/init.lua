@@ -1,3 +1,4 @@
+math.randomseed(os.time())
 vim.opt.termguicolors = true
 vim.opt.expandtab = true
 vim.opt.tabstop = 2
@@ -40,8 +41,12 @@ vim.keymap.set('n', '<C-d>', '<C-d>zz')
 vim.keymap.set('n', 'j', 'jzz')
 vim.keymap.set('n', 'k', 'kzz')
 
--- set keymap to toggele variable colors
+-- set keymap to toggle variable colors
 vim.keymap.set('n', '<leader>tc', function() require('markid').toggle() end, { desc = 'toggle markid colors' })
+
+-- set keymap to shuffle variable colors
+vim.keymap.set('n', '<leader>ts', function() require('markid').shuffle() end, { desc = 'shuffle markid colors' })
+
 
 -- For default preset
 vim.keymap.set('n', '<leader>m', function() require('treesj').toggle() end)
@@ -244,7 +249,8 @@ require('lazy').setup {
       -- keys = { '<space>m', '<space>j', '<space>s' },
       dependencies = { 'nvim-treesitter/nvim-treesitter' }, -- if you install parsers with `nvim-treesitter`
       config = function()
-        require('treesj').setup { --[[ your config ]]
+        require('treesj').setup {
+         use_default_keymaps = false
         }
       end,
     },
