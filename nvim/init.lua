@@ -56,6 +56,9 @@ vim.keymap.set('n', '<leader>m', function() require('treesj').toggle() end)
 -- For extending default preset with `recursive = true`
 vim.keymap.set('n', '<leader>M', function() require('treesj').toggle { split = { recursive = true } } end)
 
+
+vim.keymap.set('n', '<leader>v', ':Neotree toggle<cr>', { desc = 'toggle file tree (popup)' })
+
 vim.keymap.set('n', '<leader>j', '<c-w>j')
 vim.keymap.set('n', '<leader>k', '<c-w>k')
 vim.keymap.set('n', '<leader>h', '<c-w>h')
@@ -674,6 +677,24 @@ require('lazy').setup {
         { '<leader>sad', '<cmd>ApidocsOpen<cr>', desc = 'Search Api Doc' },
       },
     },
+    {
+      'nvim-neo-tree/neo-tree.nvim',
+      branch = 'v3.x',
+      dependencies = {
+        'nvim-lua/plenary.nvim',
+        'nvim-tree/nvim-web-devicons',
+        'MunifTanjim/nui.nvim',
+      },
+      config = function()
+        require('neo-tree').setup {
+          close_if_last_window = true,
+          window = {
+            position = 'float',
+          },
+        }
+      end,
+    },
+    vim.keymap.set('n', '<leader>nn', ':Neotree toggle<cr>', { desc = 'toggle file tree (popup)' }),
     -- {
     --   'MeanderingProgrammer/render-markdown.nvim',
     --   -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-mini/mini.nvim' }, -- if you use the mini.nvim suite
