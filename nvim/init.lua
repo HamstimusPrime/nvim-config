@@ -56,7 +56,6 @@ vim.keymap.set('n', '<leader>m', function() require('treesj').toggle() end)
 -- For extending default preset with `recursive = true`
 vim.keymap.set('n', '<leader>M', function() require('treesj').toggle { split = { recursive = true } } end)
 
-
 vim.keymap.set('n', '<leader>v', ':Neotree toggle<cr>', { desc = 'toggle file tree (popup)' })
 
 vim.keymap.set('n', '<leader>j', '<c-w>j')
@@ -93,8 +92,8 @@ vim.keymap.set('n', '<leader>kk', ':m .-2<cr>==', { noremap = true, silent = tru
 vim.keymap.set('n', '<leader>rl', '<cmd>LivePreview start<cr>', { desc = 'start live preview' })
 vim.keymap.set('n', '<leader>rs', '<cmd>LivePreview stop<cr>', { desc = 'stop live preview' })
 
-vim.keymap.set('n', '<leader>e', '$') -- end of line
-vim.keymap.set('n', '<leader>b', '0') -- beginning of line
+vim.keymap.set({ 'n', 'v' }, '<leader>e', '$') -- end of line
+vim.keymap.set({ 'n', 'v' }, '<leader>b', '0') -- beginning of line
 
 vim.keymap.set('n', '<leader>fm', function() vim.lsp.buf.format { async = false } end, { desc = 'format file' })
 vim.keymap.set('n', '<leader>n', ':NvimTreeToggle<cr>', { desc = 'toggle file tree' })
@@ -313,7 +312,7 @@ require('lazy').setup {
 
         -- enable treesitter highlighting per filetype, the new way
         vim.api.nvim_create_autocmd('FileType', {
-          pattern = { 'go', 'lua', 'python', 'javascript', 'typescript', 'java' },
+          pattern = { 'go', 'lua', 'python', 'javascript', 'typescript', 'java', 'html', 'javascriptreact', 'typescriptreact' },
           callback = function() vim.treesitter.start() end,
         })
       end,
@@ -694,7 +693,22 @@ require('lazy').setup {
         }
       end,
     },
-    vim.keymap.set('n', '<leader>nn', ':Neotree toggle<cr>', { desc = 'toggle file tree (popup)' }),
+    {
+      'windwp/nvim-ts-autotag',
+      {
+        'windwp/nvim-ts-autotag',
+        event = 'InsertEnter',
+        config = function() require('nvim-ts-autotag').setup() end,
+      },
+      event = 'InsertEnter',
+      config = function() require('nvim-ts-autotag').setup() end,
+    },
+    {
+      'andymass/vim-matchup',
+      event = 'BufReadPost',
+      init = function() vim.g.matchup_matchparen_offscreen = { method = 'popup' } end,
+    },
+
     -- {
     --   'MeanderingProgrammer/render-markdown.nvim',
     --   -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-mini/mini.nvim' }, -- if you use the mini.nvim suite

@@ -2,7 +2,7 @@ local M = {}
 
 
 M.colors = {
-  "#fb3bcb", "#fc9867", "#ffd866", "#a9dc76", "#78dce8",
+ "#fb3bcb", "#fc9867", "#ffd866", "#a9dc76", "#78dce8",
   "#ab9df2", "#f6025f", "#66d9ef", "#fd03d3", "#a6e22e",
   "#fd971f", "#e6db74", "#f8f8f2", "#ae81ff", "#c45a86",
   "#ff8b39", "#fff275", "#8bd450", "#28ccd9", "#7a5ef8",
