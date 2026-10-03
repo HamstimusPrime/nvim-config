@@ -672,9 +672,6 @@ require('lazy').setup {
         -- Possible options are 'ui_select', 'telescope', and 'snacks'
         -- You can change the keymap for following "local://" links by setting the configuration option 'follow_link_keymap' (default is "<C-]>"):
       end,
-      keys = {
-        { '<leader>sad', '<cmd>ApidocsOpen<cr>', desc = 'Search Api Doc' },
-      },
     },
     {
       'nvim-neo-tree/neo-tree.nvim',
@@ -838,9 +835,70 @@ vim.keymap.set('n', '<leader>r', function()
   vim.fn['slime#send'](cmd .. '\n')
 end)
 
+local last_apidocs_term = ''
+local apidocs_active = false
+
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'TelescopePrompt',
+  callback = function(args)
+    if not apidocs_active then return end
+    local bufnr = args.buf
+    local state = require 'telescope.actions.state'
+
+    -- put the saved term back into the prompt
+    vim.defer_fn(function()
+      local picker = state.get_current_picker(bufnr)
+      if picker and last_apidocs_term ~= '' then picker:set_prompt(last_apidocs_term) end
+    end, 30)
+
+    -- save the term when the prompt closes
+    vim.api.nvim_create_autocmd('BufLeave', {
+      buffer = bufnr,
+      once = true,
+      callback = function()
+        local picker = state.get_current_picker(bufnr)
+        if picker then last_apidocs_term = picker:_get_prompt() end
+        apidocs_active = false
+      end,
+    })
+  end,
+})
+
+vim.keymap.set('n', '<leader>sad', function()
+  apidocs_active = true
+  vim.cmd 'ApidocsOpen'
+end, { desc = 'Search Api Doc (remember last term)' })
+
 local builtin = require 'telescope.builtin'
-vim.keymap.set('n', '<leader>ff', builtin.find_files, { desc = 'Telescope find files' })
-vim.keymap.set('n', '<leader>fg', builtin.live_grep, { desc = 'Telescope live grep' })
+local last_term = {}
+local current
+
+local function remember(name, picker_fn)
+  return function()
+    current = name
+    picker_fn { default_text = last_term[name] or '' }
+  end
+end
+
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'TelescopePrompt',
+  callback = function(args)
+    local name = current
+    if not name then return end
+    current = nil
+    vim.api.nvim_create_autocmd('BufLeave', {
+      buffer = args.buf,
+      once = true,
+      callback = function()
+        local picker = require('telescope.actions.state').get_current_picker(args.buf)
+        if picker then last_term[name] = picker:_get_prompt() end
+      end,
+    })
+  end,
+})
+
+vim.keymap.set('n', '<leader>ff', remember('ff', builtin.find_files), { desc = 'Telescope find files' })
+vim.keymap.set('n', '<leader>fg', remember('fg', builtin.live_grep), { desc = 'Telescope live grep' })
 vim.keymap.set('n', '<leader>fb', builtin.buffers, { desc = 'Telescope buffers' })
 vim.keymap.set('n', '<leader>fh', builtin.help_tags, { desc = 'Telescope help tags' })
 print 'INIT LOADED'
