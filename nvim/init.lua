@@ -683,6 +683,7 @@ require('lazy').setup {
       },
       config = function()
         require('neo-tree').setup {
+          hijack_netrw_behavior = 'disabled',
           close_if_last_window = true,
           window = {
             position = 'float',
@@ -692,13 +693,8 @@ require('lazy').setup {
     },
     {
       'windwp/nvim-ts-autotag',
-      {
-        'windwp/nvim-ts-autotag',
-        event = 'InsertEnter',
-        config = function() require('nvim-ts-autotag').setup() end,
-      },
-      event = 'InsertEnter',
-      config = function() require('nvim-ts-autotag').setup() end,
+      event = { 'BufReadPre', 'BufNewFile' },
+      opts = {},
     },
     {
       'andymass/vim-matchup',
@@ -730,6 +726,7 @@ require('mason-lspconfig').setup {
 }
 
 require('markid').setup()
+
 -- Tell pyright to suggest unimported symbols AND add the import when accepted
 vim.lsp.config('pyright', {
   settings = {
