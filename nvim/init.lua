@@ -51,6 +51,10 @@ vim.keymap.set('n', '<leader>ts', function() require('markid').shuffle() end, { 
 vim.keymap.set('n', '<leader>tw', function() require('markid').shuffle_word_under_cursor() end, { desc = 'shuffle color for word under cursor' })
 vim.keymap.set('n', '<leader>tr', function() require('markid').reset_word_under_cursor() end, { desc = 'reset color for word under cursor' })
 
+vim.keymap.set('n', '<leader>tf', function() require('markid').focus_word_under_cursor() end, { desc = 'markid: focus word under cursor' })
+vim.keymap.set('n', '<leader>tF', function() require('markid').clear_focus() end, { desc = 'markid: clear focus' })
+
+
 -- For default preset
 vim.keymap.set('n', '<leader>m', function() require('treesj').toggle() end)
 -- For extending default preset with `recursive = true`
