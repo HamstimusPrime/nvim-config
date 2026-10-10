@@ -1,5 +1,6 @@
 local M = {}
 
+
 M.colors = {
  "#fb3bcb", "#fc9867", "#ffd866", "#a9dc76", "#78dce8",
   "#ab9df2", "#f6025f", "#66d9ef", "#fd03d3", "#a6e22e",
@@ -17,14 +18,18 @@ M.colors = {
 
 
 
+
 M.exclude_parents = {
-  'field_identifier', -- Go struct fields / selector expressions
-  'field_declaration', -- Go struct field decls
-  'property_identifier', -- JS/TS object properties (e.g. `obj.prop`)
+  "field_identifier",        -- Go struct fields / selector expressions
+  "field_declaration",       -- Go struct field decls
+  "property_identifier",     -- JS/TS object properties
+  "shorthand_property_identifier",
+  "shorthand_property_identifier_pattern",
+  "attribute",                -- Python class attributes (approximate)
 }
-local ns = vim.api.nvim_create_namespace 'markid'
+local ns = vim.api.nvim_create_namespace("markid")
 M.enabled = true
-M.overrides = {} -- [identifier text] = color index, set manually via shuffle_word
+M.overrides = {}  -- [identifier text] = color index, set manually via shuffle_word
 
 -- FNV-1a hash: mixes bits multiplicatively, spreads names across
 -- the color list much more evenly than a simple byte sum would.
@@ -39,32 +44,6 @@ local function hash(str)
   return h
 end
 
--- Some languages use a different node type for shorthand references to a
--- variable (e.g. JS/TS object shorthand `{val}` isn't type "identifier").
--- These still refer to the same name and should get the same color.
-M.extra_capture_nodes = {
-  'shorthand_property_identifier', -- JS/TS: {val}
-  'shorthand_property_identifier_pattern', -- JS/TS: const {val} = obj
-}
-
-local query_cache = {}
-
--- Each extra node type is tested on its own against the loaded grammar,
--- so this works for any language name and any parser version.
-local function build_query(lang)
-  if query_cache[lang] ~= nil then return query_cache[lang] or nil end
-
-  local parts = { '(identifier)' }
-  for _, node_type in ipairs(M.extra_capture_nodes) do
-    local ok = pcall(vim.treesitter.query.parse, lang, '(' .. node_type .. ') @x')
-    if ok then table.insert(parts, '(' .. node_type .. ')') end
-  end
-
-  local ok, query = pcall(vim.treesitter.query.parse, lang, '[' .. table.concat(parts, '\n') .. '] @markid')
-  query_cache[lang] = ok and query or false
-  return ok and query or nil
-end
-
 function M.highlight(bufnr)
   bufnr = bufnr or 0
   vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
@@ -76,47 +55,39 @@ function M.highlight(bufnr)
   local ok_parser, parser = pcall(vim.treesitter.get_parser, bufnr, lang)
   if not ok_parser or not parser then return end
 
-  local query = build_query(lang)
-  if not query then return end
+  local ok_query, query = pcall(vim.treesitter.query.parse, lang, "(identifier) @markid")
+  if not ok_query then return end
 
   local root = parser:parse()[1]:root()
 
   for id, node in query:iter_captures(root, bufnr, 0, -1) do
-    if query.captures[id] == 'markid' then
+    if query.captures[id] == "markid" then
       local parent = node:parent()
       local skip = parent and vim.tbl_contains(M.exclude_parents, parent:type())
-
-      -- Python: `bullet.kill` is an `attribute` node with two identifier
-      -- children (object + attribute name). Only skip the attribute-name
-      -- side (`kill`), not the object side (`bullet`).
-      if not skip and parent and parent:type() == 'attribute' then
-        local attr_field = parent:field 'attribute'
-        if attr_field and attr_field[1] == node then skip = true end
-      end
 
       -- Go: `Foo{Name: "x"}` parses Name as a plain `identifier` wrapped
       -- in `literal_element`, inside `keyed_element`'s "key" field.
       -- This is a struct field name, not a variable reference, so skip it.
-      if not skip and parent and parent:type() == 'literal_element' then
+      if not skip and parent and parent:type() == "literal_element" then
         local keyed = parent:parent()
-        if keyed and keyed:type() == 'keyed_element' then
-          local key_nodes = keyed:field 'key'
-          if key_nodes and key_nodes[1] == parent then skip = true end
+        if keyed and keyed:type() == "keyed_element" then
+          local key_nodes = keyed:field("key")
+          if key_nodes and key_nodes[1] == parent then
+            skip = true
+          end
         end
       end
 
       if not skip then
         local text = vim.treesitter.get_node_text(node, bufnr)
         local idx = M.overrides[text] or ((hash(text) % #M.colors) + 1)
-        local group = 'Markid' .. idx
+        local group = "Markid" .. idx
         vim.api.nvim_set_hl(0, group, { fg = M.colors[idx] })
 
         local srow, scol, erow, ecol = node:range()
         vim.api.nvim_buf_set_extmark(bufnr, ns, srow, scol, {
-          end_row = erow,
-          end_col = ecol,
-          hl_group = group,
-          priority = 200,
+          end_row = erow, end_col = ecol,
+          hl_group = group, priority = 200,
         })
       end
     end
@@ -126,9 +97,11 @@ end
 function M.toggle()
   M.enabled = not M.enabled
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_is_loaded(bufnr) then M.highlight(bufnr) end
+    if vim.api.nvim_buf_is_loaded(bufnr) then
+      M.highlight(bufnr)
+    end
   end
-  vim.notify('markid: ' .. (M.enabled and 'on' or 'off'))
+  vim.notify("markid: " .. (M.enabled and "on" or "off"))
 end
 
 function M.shuffle()
@@ -137,15 +110,17 @@ function M.shuffle()
     M.colors[i], M.colors[j] = M.colors[j], M.colors[i]
   end
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_is_loaded(bufnr) then M.highlight(bufnr) end
+    if vim.api.nvim_buf_is_loaded(bufnr) then
+      M.highlight(bufnr)
+    end
   end
-  vim.notify 'markid: colors shuffled'
+  vim.notify("markid: colors shuffled")
 end
 
 -- Reassign a random color to one specific identifier name, independent
 -- of the hash-based color every other name still uses.
 function M.shuffle_word(word)
-  if not word or word == '' then return end
+  if not word or word == "" then return end
   local current = M.overrides[word] or ((hash(word) % #M.colors) + 1)
   local idx = current
   if #M.colors > 1 then
@@ -155,30 +130,39 @@ function M.shuffle_word(word)
   end
   M.overrides[word] = idx
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_is_loaded(bufnr) then M.highlight(bufnr) end
+    if vim.api.nvim_buf_is_loaded(bufnr) then
+      M.highlight(bufnr)
+    end
   end
   vim.notify("markid: shuffled color for '" .. word .. "'")
 end
 
-function M.shuffle_word_under_cursor() M.shuffle_word(vim.fn.expand '<cword>') end
+function M.shuffle_word_under_cursor()
+  M.shuffle_word(vim.fn.expand("<cword>"))
+end
 
 -- Remove a name's manual override, letting it fall back to its hash color.
 function M.reset_word(word)
   M.overrides[word] = nil
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_is_loaded(bufnr) then M.highlight(bufnr) end
+    if vim.api.nvim_buf_is_loaded(bufnr) then
+      M.highlight(bufnr)
+    end
   end
 end
 
-function M.reset_word_under_cursor() M.reset_word(vim.fn.expand '<cword>') end
+function M.reset_word_under_cursor()
+  M.reset_word(vim.fn.expand("<cword>"))
+end
 
 function M.setup(opts)
   opts = opts or {}
   M.colors = opts.colors or M.colors
   M.exclude_parents = opts.exclude_parents or M.exclude_parents
-  vim.api.nvim_create_autocmd({ 'FileType', 'TextChanged', 'InsertLeave', 'BufWritePost' }, {
+  vim.api.nvim_create_autocmd({ "FileType", "TextChanged", "InsertLeave", "BufWritePost" }, {
     callback = function(args) M.highlight(args.buf) end,
   })
 end
 
 return M
+
