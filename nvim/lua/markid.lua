@@ -1,7 +1,7 @@
 local M = {}
 
 M.colors = {
- "#fb3bcb", "#fc9867", "#ffd866", "#a9dc76", "#78dce8",
+  "#fb3bcb", "#fc9867", "#ffd866", "#a9dc76", "#78dce8",
  "#ab9df2", "#f6025f", "#66d9ef", "#fd03d3", "#a6e22e",
  "#fd971f", "#e6db74", "#f8f8f2", "#ae81ff", "#c45a86",
  "#ff8b39", "#fff275", "#8bd450", "#28ccd9", "#7a5ef8",
@@ -15,9 +15,8 @@ M.colors = {
  "#ff8b39", "#03ad39", "#73ff00", "#28ccd9", "#7a5ef8",
  "#c50166", "#56d9d0", "#ff9d5c", "#3a227a", "#5ca4ff",
  "#e05fff", "#fa094a", "#0a3024", "#ffb400", "#2600ff",
+
 }
-
-
 
 M.exclude_parents = {
   "field_identifier",        -- Go struct fields / selector expressions
@@ -29,6 +28,19 @@ M.enabled = true
 M.overrides = {}  -- [identifier text] = color index, set manually via shuffle_word
 M.disabled = {}   -- [identifier text] = true, names with colors turned off
 M.focus = {}      -- [identifier text] = true; when not empty, ONLY these names get colors
+
+-- Names that never get a color (common library types, for example).
+-- Replace or extend this list through setup { ignore_names = { ... } }.
+M.ignore_names = {
+  "String", "Object", "Integer", "Long", "Double", "Float",
+  "Boolean", "Character", "Byte", "Short", "Void",
+}
+local ignored = {}
+local function rebuild_ignored()
+  ignored = {}
+  for _, name in ipairs(M.ignore_names) do ignored[name] = true end
+end
+rebuild_ignored()
 
 -- FNV-1a hash: mixes bits multiplicatively, spreads names across
 -- the color list much more evenly than a simple byte sum would.
@@ -49,6 +61,7 @@ end
 M.extra_capture_nodes = {
   "shorthand_property_identifier",          -- JS/TS: {val}
   "shorthand_property_identifier_pattern",  -- JS/TS: const {val} = obj
+  "type_identifier",                        -- Java/Go/TS: a class or type name used as a type
 }
 
 local query_cache = {}
@@ -115,7 +128,7 @@ function M.highlight(bufnr)
 
       local text = not skip and vim.treesitter.get_node_text(node, bufnr)
       local focus_ok = next(M.focus) == nil or M.focus[text]
-      if text and focus_ok and not M.disabled[text] then
+      if text and focus_ok and not M.disabled[text] and not ignored[text] then
         local idx = M.overrides[text] or ((hash(text) % #M.colors) + 1)
         local group = "Markid" .. idx
         vim.api.nvim_set_hl(0, group, { fg = M.colors[idx] })
@@ -238,6 +251,8 @@ function M.setup(opts)
   opts = opts or {}
   M.colors = opts.colors or M.colors
   M.exclude_parents = opts.exclude_parents or M.exclude_parents
+  M.ignore_names = opts.ignore_names or M.ignore_names
+  rebuild_ignored()
   vim.api.nvim_create_autocmd({ "FileType", "TextChanged", "InsertLeave", "BufWritePost" }, {
     callback = function(args) M.highlight(args.buf) end,
   })
